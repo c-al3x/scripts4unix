@@ -1,0 +1,216 @@
+#!/bin/bash
+
+# manjaro should have curl, pamac, pacman, git, and wget already
+
+# # # # # # #
+# Essential #
+# # # # # # #
+
+# Create directory for dotfiles, other, mountpoint
+sudo mkdir ~/.dotfiles ~/.other /mnt/usb 
+
+# Prepare pacman with core packages
+sudo pacman -Syu
+
+# Install essential packages
+sudo pamac install gcc make vim mpv calcurse neofetch newsboat
+
+# # # # #
+# Other #
+# # # # #
+
+# Install media-related, file and web related, colorschemes
+sudo pamac install w3m youtube-viewer ranger python-pywal feh
+git clone https://github.com/jarun/googler.git ~/.other/googler
+git clone https://github.com/jarun/ddgr.git ~/.other/ddgr
+sudo make -C ~/.other/googler install
+sudo make -C ~/.other/ddgr install
+rm -r ~/.other/googler ~/.other/ddgr
+
+# Install Firefox and st
+sudo pamac install firefox
+git clone https://git.suckless.org/st ~/.other/st
+sudo pamac install pkg-config
+sudo make -C ~/.other/st clean install
+
+# Install music-related
+# Start mopidy after this to get ncmpcpp working
+sudo pacman -S yay
+yay -S ncmpcpp mpc mopidy mopidy-mpd mopidy-spotify mopidy-scrobbler
+sudo sed -i 's/#load-module module-native-protocol-tcp/load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1/' /etc/pulse/default.pa # configure systemd service of mopidy with pulseaudio - taken from https://docs.mopidy.com/en/latest/running/service/#system-service-and-pulseaudio
+pulseaudio --kill
+start-pulseaudio-x11
+
+# Install screenshot program, image viewer, PDF/E-book reader, etc.
+# This should also leave you with pdftoppm available
+sudo pacman -S flameshot # take screenshot using "flameshot gui" in dmenu
+sudo pacman -S sxiv # image-viewer
+sudo pacman -S zathura zathura-pdf-mupdf zathura-djvu # don't install calibre
+sudo pacman -S tesseract tesseract-data-eng # OCR tool
+sudo pacman -S festival festival-us xsel # TTS
+sudo pacman -S sxhkd # make sure to use your own config
+
+# Install other browsers (IceCat, Ungoogled Chromium, qutebrowser)
+sudo pacman -S qutebrowser
+icecatv=$(wget -q -O gnuzilla.html https://ftp.wayne.edu/gnu/gnuzilla/ && grep "href" gnuzilla.html | sed -s -e 'x;$!d ; s/.*<a href="\(.*\)\/".*/\1/')
+wget -O icecat.tar.bz2 https://ftp.wayne.edu/gnu/gnuzilla/$icecatv/icecat-$icecatv.en-US.gnulinux-x86_64.tar.bz2
+tar xvf icecat.tar.bz2 -C ~/.other
+sudo ln -s ~/.other/icecat/icecat /usr/bin/icecat
+rm gnuzilla.html icecat.tar.bz2
+
+# # # #
+# Vim #
+# # # # 
+
+# Install plug.vim
+curl -fLo ~/.vim/autoload/plug.vim --create-dirs \ 
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+
+# Install vim plugins from .vimrc
+vim -c +PlugInstall +q +q
+
+# # # #
+# ZSH #
+# # # #
+
+# Install syntax highlighting
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.dotfiles/zsh-syntax-highlighting
+
+# Install oh-my-zsh
+wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+ZSH="$HOME/.dotfiles/oh-my-zsh" sh install.sh
+rm install.sh
+
+# # # # # # # #
+# Win Manager #
+# # # # # # # #
+
+# After complete, choose dwm within Display Manager next time
+
+dwm_info="[Desktop Entry]\n
+Encoding=UTF-8\n
+Name=dwm\n
+Comment=Dynamic Window Manager\n
+Exec=/usr/local/bin/dwm\n
+Icon=\n
+Type=Application"
+
+# Install dwm
+sudo git clone https://git.suckless.org/dwm ~/.other/dwm
+sudo make -C ~/.other/dwm clean install
+
+# Install dmenu
+sudo git clone https://git.suckless.org/dmenu ~/.other/dmenu
+sudo make -C ~/.other/dmenu clean install
+
+# Create dwm option in Manjaro XFCE Display Manager
+echo $dwm_info > ~/dwm.desktop
+sudo mv ~/dwm.desktop /usr/share/xsessions
+sudo chmod 777 ~/.Xauthority # breaks otherwise, for some reason
+
+# Prepare dwm for custom rice
+# Will need patch, but patch should come with Manjaro, it seems
+sudo pacman -S xorg-xbacklight # for brightness adjustments
+sudo pacman -S picom # for alpha (transparency) patch
+sudo pacman -S xorg-xsetroot # for status bar info
+
+# If you want i3-gaps instead
+#sudo pacman -S i3-gaps # reboot and choose i3 within Display Manager
+
+# # # # # # # # 
+# Status Bars #
+# # # # # # # #
+
+# Probably use polybar, but can also just use status bar with dwm
+
+# # # # # # # # # #
+# Audio Production #
+# # # # # # # # # #
+
+# Note: This will probably be a nightmare. Good luck.
+
+# General setup
+# Run cadence after installed and go to "Configure"
+# Driver > ALSA | Device/Interface: PCH,0 [ALC3232 Analog]
+# Engine > Realtime [checked] | Realtime priority: 99 
+# Actually, might not want to change priority...
+# If you want to use an interface, go back to Driver > ALSA and choose your interface
+# But make sure that input and output channels are set to 0
+# For MIDI, make sure to select a MIDI driver - ALSA Raw MIDI should work
+# If you are done using the interface, make sure to stop the JACK server
+# Or else, audio will no longer function
+# The lower the buffer, the lower the latency but also the lower the computer's performance
+# For MIDI, make sure to select a MIDI driver in the ALSA settings in cadence
+# Then, in catia, make sure to select "Show ALSA-MIDI" in Settings
+sudo usermod -a -G audio $USER
+
+audiolimits="# audio group\n\
+	@audio           -       rtprio          95\n\
+	@audio           -       memlock         unlimited\n\n\
+	# End of file"
+
+sudo sed -i "s/# End of file/$audiolimits/" /etc/security/limits.conf
+
+sudo pacman -S jack2 cadence ardour
+
+# # # #
+# Work #
+# # # #
+
+# Install Node 
+# ??? Should be simple ???
+
+# Install MongoDB
+yay -S mongodb-bin-4.0 # Might be outdated when you're looking at this
+# yay -S mongodb-compass # This is a GUI for MongoDB - not necessary
+
+# Install Django and pipenv
+pip install django pipenv # Assuming pip is already installed at this point
+
+# Install Python debugger
+pip install ipdb
+
+# Install React
+# npx create-react-app react-task-tracker # I ran this inside a react folder in Documents/projects
+
+# # # # #
+# Other #
+# # # # #
+
+# On my machine, touchpad issues occur
+# Might need to install package for needed driver software
+# This actually didn't fix it ;_;
+# sudo pacman -S xf86-input-synaptics 
+
+# Date and Time:
+# On my machine, need to switch timezone weirdly
+# sudo timedatectl set-timezone Africa/Algiers
+
+# Default Applications:
+# Make st the default terminal, firefox default browser
+
+# VPN:
+# For purevpn, install openvpn and download purevpn config files
+# sudo pacman -S openvpn
+# After you download the config files, you can run something like this:
+# sudo openvpn --config ~/Documents/random/ovpn/TCP/blahblahblah.ovpn
+
+# Firefox:
+# 1. Add profile for hardened browser
+# # Use profile.zip [should be backed up]
+# # firefox -no-remote -ProfileManager
+# # # Create a new profile here
+# # # Start new profile, about:support, copy profile path, close firefox
+# # rm -r ~/.mozilla/firefox/[profile_path] && unzip profile.zip && mv extensions prefs.js ~/.mozilla/firefox[profile_path]
+# # Start Firefox again and should be ready
+# 2. Set up search keywords (g, gi, yi, s)
+# 3. Set up startpage
+# 4. Customize userChrome.css
+
+# Backups:
+# Use timeshift
+# 1. sudo pacman -S timeshift
+# 2. You'll probably have to use RSYNC
+# 3. Configure snapshot schedule
+# 4. Probably include home directories
+# 5. Click Create to, well, create snapshot

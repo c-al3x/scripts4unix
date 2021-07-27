@@ -1,0 +1,138 @@
+#!/bin/bash
+
+# raspbian should have gpg, wget, ...
+
+# # # # # # # # # # # # #
+# Synapse + Riot + Jitsi #
+# # # # # # # # # # # # #
+
+# Have domains ready - Use freedns.afraid.org
+# For now, using default, <INSERT_DOMAIN_HERE> 
+# Again, make sure domains for matrix... and riot... ready too
+# Make sure to enable port forwarding for port 80 AND 443
+
+# Basic setup
+sudo apt-get update
+sudo apt-get install nginx
+
+# Set domain
+domain="<INSERT_DOMAIN_HERE>"
+
+# Create subdomains
+server=$'server {
+       listen 80;
+       listen [::]:80;
+
+       server_name example.com;
+
+       root /var/www/example.com;
+       index index.html;
+
+       location / {
+           try_files $uri $uri/ =404;
+       }
+}'
+
+ngpath="/etc/nginx/sites-enabled/"
+sudo touch ${ngpath}${domain} ${ngpath}matrix.${domain} ${ngpath}riot.${domain}
+sudo chmod 777 ${ngpath}${domain} ${ngpath}matrix.${domain} ${ngpath}riot.${domain}
+sudo echo "$server" > ${ngpath}${domain}
+sudo echo "$server" > ${ngpath}matrix.${domain}
+sudo echo "$server" > ${ngpath}riot.${domain}
+sudo echo "$server" > ${ngpath}riot.${domain}
+sudo sed -i 's/example.com/${domain}/g' ${ngpath}${domain}
+sudo sed -i 's/example.com/${domain}/g' ${ngpath}${domain}
+sudo sed -i 's/example.com/matrix.${domain}/g' ${ngpath}matrix.${domain}
+sudo sed -i 's/example.com/matrix.${domain}/g' ${ngpath}matrix.${domain}
+sudo sed -i 's~try_files $uri $uri/ =404;~proxy_pass http://localhost:8008;~' ${ngpath}matrix.${domain}
+sudo sed -i 's~try_files $uri $uri/ =404;~proxy_pass http://localhost:8008;~' ${ngpath}matrix.${domain}
+sudo sed -i 's/server_name example.com/server_name riot.${domain}/' ${ngpath}riot.${domain}
+sudo sed -i 's/server_name example.com/server_name riot.${domain}/' ${ngpath}riot.${domain}
+sudo sed -i 's~root /var/www/example.com~root /var/www/riot.${domain}/riot~' ${ngpath}riot.${domain}
+sudo sed -i 's~root /var/www/example.com~root /var/www/riot.${domain}/riot~' ${ngpath}riot.${domain}
+sudo mkdir /var/www/${domain} /var/www/riot.${domain} /var/www/riot.${domain}/riot
+sudo mkdir /var/www/${domain} /var/www/riot.${domain} /var/www/riot.${domain}/riot
+sudo touch /var/www/${domain}/index.html /var/www/riot.${domain}/riot/index.html
+sudo touch /var/www/${domain}/index.html /var/www/riot.${domain}/riot/index.html
+sudo chmod 777 /var/www/${domain}/index.html /var/www/riot.${domain}/riot/index.html
+sudo chmod 777 /var/www/${domain}/index.html /var/www/riot.${domain}/riot/index.html
+sudo cat /var/www/html/index.nginx-debian.html > /var/www/${domain}/index.html
+sudo cat /var/www/html/index.nginx-debian.html > /var/www/${domain}/index.html
+sudo cat /var/www/html/index.nginx-debian.html > /var/www/riot.${domain}/riot/index.html
+sudo cat /var/www/html/index.nginx-debian.html > /var/www/riot.${domain}/riot/index.html
+
+# Encryption setup
+sudo apt install python3-certbot-nginx
+sudo certbot --nginx -d ${domain} -d matrix.${domain} -d riot.${domain}
+sudo certbot --nginx -d ${domain} -d matrix.${domain} -d riot.${domain}
+
+# Install synapse
+# When asked for domain, use ${domain}
+sudo apt install -y lsb-release wget apt-transport-https # Might be unnecessary
+sudo apt install matrix-synapse # Choose ${domain} for server name 
+sudo apt install matrix-synapse # Choose ${domain} for server name 
+sudo cp /etc/letsencrypt/live/${domain}/cert.pem /etc/matrix-synapse/homeserver.tls.crt
+sudo cp /etc/letsencrypt/live/${domain}/cert.pem /etc/matrix-synapse/homeserver.tls.crt
+sudo cp /etc/letsencrypt/live/${domain}/privkey.pem /etc/matrix-synapse/homeserver.tls.key
+sudo cp /etc/letsencrypt/live/${domain}/privkey.pem /etc/matrix-synapse/homeserver.tls.key
+sudo chown matrix-synapse: /etc/matrix-synapse/homeserver.tls.crt /etc/matrix-synapse/homeserver.tls.key
+sudo systemctl start matrix-synapse
+sudo systemctl enable matrix-synapse
+sudo mkdir -p /var/www/${domain}/.well-known/matrix
+sudo mkdir -p /var/www/${domain}/.well-known/matrix
+sudo chmod 777 /var/www/${domain}/.well-known/matrix
+sudo chmod 777 /var/www/${domain}/.well-known/matrix
+sudo echo { "m.server": "matrix.${domain}:443" } > /var/www/${domain}/.well-known/matrix/server
+sudo echo { "m.server": "matrix.${domain}:443" } > /var/www/${domain}/.well-known/matrix/server
+
+# Install riot
+sudo wget https://github.com/vector-im/element-web/releases/download/v1.7.21/element-v1.7.21.tar.gz /var/www/riot.${domain}/ # May not be the latest release any longer 
+sudo wget https://github.com/vector-im/element-web/releases/download/v1.7.21/element-v1.7.21.tar.gz /var/www/riot.${domain}/ # May not be the latest release any longer 
+sudo wget https://github.com/vector-im/element-web/releases/download/v1.7.21/element-v1.7.21.tar.gz.asc /var/www/riot.${domain}/ # May not be for the latest release any longer
+sudo wget https://github.com/vector-im/element-web/releases/download/v1.7.21/element-v1.7.21.tar.gz.asc /var/www/riot.${domain}/ # May not be for the latest release any longer
+sudo wget https://packages.riot.im/element-release-key.asc /var/www/riot.${domain}/ # Should be for latest release?
+sudo wget https://packages.riot.im/element-release-key.asc /var/www/riot.${domain}/ # Should be for latest release?
+sudo gpg --import /var/www/riot.${domain}/element-release-key.asc
+sudo gpg --import /var/www/riot.${domain}/element-release-key.asc
+sudo gpg --verify /var/www/riot.${domain}/element-v1.7.21.tar.gz.asc # Again, may not be latest release any longer
+sudo gpg --verify /var/www/riot.${domain}/element-v1.7.21.tar.gz.asc # Again, may not be latest release any longer
+# If good signature did not appear, then... o_o
+sudo tar -zxvf element-v1.7.21.tar.gz -C /var/www/riot.${domain}/
+sudo tar -zxvf element-v1.7.21.tar.gz -C /var/www/riot.${domain}/
+sudo mv /var/www/riot.${domain}/element-v1.7.21/* /var/www/riot.${domain}/riot/
+sudo mv /var/www/riot.${domain}/element-v1.7.21/* /var/www/riot.${domain}/riot/
+sudo rm -r /var/www/riot.${domain}/element-v1.7.21
+sudo rm -r /var/www/riot.${domain}/element-v1.7.21
+sudo cp /var/www/riot.${domain}/riot/config.sample.json /var/www/riot.${domain}/riot/config.json
+sudo cp /var/www/riot.${domain}/riot/config.sample.json /var/www/riot.${domain}/riot/config.json
+sudo sed -i 's/matrix-client.matrix.org/matrix.${domain}/' /var/www/riot.${domain}/riot/config.json
+sudo sed -i 's/matrix-client.matrix.org/matrix.${domain}/' /var/www/riot.${domain}/riot/config.json
+sudo sed -i 's/matrix.org/${domain}/' /var/www/riot.${domain}/riot/config.json
+sudo sed -i 's/matrix.org/${domain}/' /var/www/riot.${domain}/riot/config.json
+sudo sed -i 's/enable_registration: False/enable_registration: True/' /etc/matrix-synapse/homeserver.yaml
+sudo systemctl restart matrix-synapse
+
+# Set up Jitsi server
+
+curl https://download.jitsi.org/jitsi-key.gpg.key | sudo sh -c 'gpg --dearmor > /usr/share/keyrings/jitsi-keyring.gpg'
+echo 'deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] https://download.jitsi.org stable/' | sudo tee /etc/apt/sources.list.d/jitsi-stable.list > /dev/null
+sudo apt update
+sudo apt install jitsi-meet # Use meet.${domain} and choose first certificate option
+sudo apt install jitsi-meet # Use meet.${domain} and choose first certificate option
+sudo /usr/share/jitsi-meet/scripts/install-letsencrypt-cert.sh
+sudo sed -i 's/jitsi.riot.im/meet.${domain}/' /var/www/riot.${domain}/riot/config.json
+sudo sed -i 's/jitsi.riot.im/meet.${domain}/' /var/www/riot.${domain}/riot/config.json
+sudo chmod 777 /etc/prosody/conf.d/meet.${domain}.cfg.lua /etc/jitsi/jicofo /etc/jitsi/videobridge /etc/jitsi/jicofo/config /etc/jitsi/videobridge/config
+sudo chmod 777 /etc/prosody/conf.d/meet.${domain}.cfg.lua /etc/jitsi/jicofo /etc/jitsi/videobridge /etc/jitsi/jicofo/config /etc/jitsi/videobridge/config
+sudo sed -i 's/-- https_ports/https_ports/' /etc/prosody/conf.d/meet.${domain}.cfg.lua
+sudo sed -i 's/-- https_ports/https_ports/' /etc/prosody/conf.d/meet.${domain}.cfg.lua
+sudo sed -i 's/OPTS=""/OPTS=""\n\nJICOFO_MAX_MEMORY=1024m/' /etc/jitsi/jicofo/config
+sudo sed -i 's/OPTS="--apis=,"/OPTS=""\n\nVIDEOBRIDGE_MAX_MEMORY=1024m/' /etc/jitsi/videobridge/config
+local_ip=$(ip address | grep 192 | sed -r 's~.*inet ~~ ; s~/.*~~')
+public_ip=$(curl ifconfig.me)
+sudo echo "org.ice4j.ice.harvest.NAT_HARVESTER_LOCAL_ADDRESS=$local_ip
+org.ice4j.ice.harvest.NAT_HARVESTER_PUBLIC_ADDRESS=$public_ip" | sudo tee -a /etc/jitsi/videobridge/sip-communicator.properties
+sudo sed -i 's/org.ice4j.ice.harvest.STUN/#org.ice4j.ice.harvest.STUN/' /etc/jitsi/videobridge/sip-communicator.properties
+sudo sed -i 's/anonymous/internal_plain/' /etc/prosody/conf.avail/meet.${domain}.cfg.lua
+sudo sed -i 's/anonymous/internal_plain/' /etc/prosody/conf.avail/meet.${domain}.cfg.lua
+sudo /etc/jitsi/jicofo/sip-communicator.properties
