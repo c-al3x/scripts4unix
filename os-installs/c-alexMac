@@ -1,0 +1,140 @@
+#!/bin/bash
+
+# macOS should have vim, curl, unzip, pip3 already
+
+# # # # # # # 
+# Essential #
+# # # # # # #
+
+# Create directory for dotfiles, other utilities
+mkdir ~/.dotfiles ~/.other
+
+# Install Homebrew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+
+# Install essential larger packages
+brew install coreutils git mpv 
+
+# Install essential smaller packages
+brew install htop calcurse neofetch newsboat wget
+
+# # # # # 
+# Other #
+# # # # #
+
+# Install music-related
+brew install ncmpcpp mpc mpd
+brew tap mopidy/mopidy
+brew install mopidy
+brew install mopidy/mopidy/mopidy-scrobbler 
+brew install mopidy/mopidy/mopidy-spotify
+brew services start mopidy
+brew services stop mopidy
+
+# Install media-related, file and web related, colorschemes
+brew install thekevjames/youtube-viewer/youtube-viewer
+brew install eddieantonio/eddieantonio/imgcat
+brew install imagemagick ranger w3m googler ddgr
+pip3 install pywal 
+pip3 install pyyaml pygments werkzeug flask babel flask_babel lxml dateutils # Dependencies for searx
+
+# Install Firefox and iTerm
+brew cask install firefox
+wget -O iterm.zip https://iterm2.com/downloads/stable/latest
+unzip iterm.zip && mv iTerm.app /Applications && rm iterm.zip
+
+# Need a .vimrc and .zshrc
+# Might want .calcurse, .mpd, .ncmpcpp
+# Might need a .newsboat directory with urls and config
+# Might want .config/mopidy/mopidy.conf, but note
+# that Last.fm Pro accounts won't work with [last.fm]
+# Inside .config/youtube-viewer:
+# api.json, instances.json, youtube-viewer.conf
+
+# # # #
+# Vim #
+# # # #
+
+# Install plug.vim
+curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+
+# Install vim plugins from .vimrc
+vim "+PlugInstall" "+q" "+q"
+
+# # # #
+# ZSH #
+# # # #
+
+# Install ZSH syntax highlighting
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ~/.dotfiles/zsh-syntax-highlighting
+
+# Install oh-my-zsh
+mkdir ~/.dotfiles/oh-my-zsh
+wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+ZSH="$HOME/.dotfiles/oh-my-zsh" sh install.sh
+
+# # # # #
+# yabai #
+# # # # #
+
+# Install window manager
+brew install koekeishiya/formulae/yabai
+input='n'
+while [ $input != y ]
+do
+    echo "Ah, installing yabai, huh? Well, make sure to do the following:"
+    echo "Open System Preferences.app and navigate to Security & Privacy, then Privacy, then Accessibility. Click the lock icon at the bottom and enter your password to allow changes to the list. Starting with brew services start yabai will prompt the user to allow yabai accessibility permissions. Check the box next to yabai to allow accessibility permissions."
+    echo "Once you've done this, please enter 'y'"
+    read input
+done
+sudo yabai --install-sa
+brew services start yabai
+killall Dock
+input='n'
+while [ $input != y ]
+do
+    echo "Almost done installing yabai! Make sure that inside your $HOME/.config/yabai directory, you've placed the yabairc file. Once you've done so, please enter 'y'."
+    read input
+done
+# Load config
+chmod +x ~/.config/yabai/yabairc
+~/.config/yabai/yabairc
+
+# # # # # # #
+# Ubersicht #
+# # # # # # #
+
+# Install Ubersicht
+wget -O widgets.app.zip http://tracesof.net/uebersicht/releases/Uebersicht-1.6.66.app.zip
+unzip widgets.app.zip && mv Übersicht.app /Applications && rm widgets.app.zip
+
+# Install status bars
+git clone https://github.com/ajdnik/powerbar /Library/Application\ Support/Übersicht/widgets/powerbar
+git clone https://github.com/HanneMaes/black-bottom-bar-ubersicht-widgets /Library/Application\ Support/Übersicht/widgets/bottombar
+ 
+# # # # # # # # # # #
+# System Preference #
+# # # # # # # # # # #
+
+# Automatically hide default status bar
+default write NSGlobalDomain _HIHideMenuBar -bool true
+
+# Other:
+# After Firefox Is Installed:
+# 1. Add uBlock Origin extension [See 5]
+# 2. Set up startpage
+# 3. Set up search keywords (g, gi, yi, s)
+# 4. Customize userChrome.css
+# 5. Harden Firefox's privacy with special profile
+# Change Dock and Status Bar
+# 1. Make dock smaller and adjust magnification
+# 2. Only have a few applications on dock
+# 3. Make status bar automatically hide
+# Adjust iTerm Preferences
+# 1. Adjust transparency, blur, and style in the Window section under the "Profiles" tab in Preferences
+
+# Note:
+# A fresh install of macOS will cause issues for the setwp function in .zshrc
+# For now, change the default wallpaper once through the desktop environment
+# Afterwards, setwp should work properly
